@@ -55,7 +55,7 @@
     <string name="settings_desktop_mode_title">وضع سطح المكتب</string>
     <string name="settings_desktop_mode_desc">عرض المواقع بتخطيط سطح المكتب الكامل مع عرض واسع ومُعرّف متصفح سطح المكتب والتمرير الأفقي.</string>
     <string name="settings_zoom_title">حجم عرض المواقع</string>
-    <string name="settings_zoom_desc">تغيير حجم عرض الصفحات (50% – 200%) في جميع علامات التبويب مع الحفاظ على وضع سطح المكتب والتكبير باللمس.</string>
+    <string name="settings_zoom_desc">تغيير حجم عرض الصفحات (50% – 400%) في جميع علامات التبويب لهذا الملف مع الحفاظ على وضع سطح المكتب والتكبير باللمس.</string>
     <string name="settings_zoom_reset">إعادة ضبط الحجم</string>
     <string name="settings_zoom_percent_format">%1$d%%</string>
     <string name="settings_javascript_title">جافاسكريبت</string>
@@ -65,10 +65,10 @@
     <string name="settings_clear_data_title">مسح بيانات التصفح</string>
     <string name="settings_clear_data_desc">حذف ملفات تعريف الارتباط والملفات المؤقتة وبيانات النماذج وتخزين الويب وسجل التصفح.</string>
     <string name="settings_clear_data_confirm_title">هل تريد مسح بيانات التصفح؟</string>
-    <string name="settings_clear_data_confirm_body">سيؤدي ذلك إلى تسجيل خروجك من المواقع (بما في ذلك TikTok) وحذف الصفحات المؤقتة وملفات تعريف الارتباط.</string>
+    <string name="settings_clear_data_confirm_body">سيؤدي ذلك إلى تسجيل خروجك من المواقع في هذا الملف الشخصي فقط (بما في ذلك TikTok) وحذف الصفحات المؤقتة وملفات تعريف الارتباط.</string>
     <string name="settings_clear_data_confirm_action">مسح بيانات التصفح</string>
     <string name="settings_cancel">إلغاء</string>
-    <string name="settings_data_cleared">تم مسح بيانات التصفح وملفات تعريف الارتباط بنجاح.</string>
+    <string name="settings_data_cleared">تم مسح بيانات التصفح وملفات تعريف الارتباط لهذا الملف بنجاح.</string>
 
     <string name="settings_section_info">معلومات المحرك</string>
     <string name="settings_active_ua_label">مُعرّف المتصفح النشط</string>
@@ -98,6 +98,38 @@
     <string name="settings_tiktok_login_button">تسجيل الدخول إلى TikTok</string>
     <string name="settings_tiktok_logout_button">تسجيل الخروج</string>
     <string name="settings_tiktok_logout_confirm_title">هل تريد تسجيل الخروج من TikTok؟</string>
-    <string name="settings_tiktok_logout_confirm_body">سيؤدي ذلك إلى إنهاء جلسة TikTok وحذف ملفات تعريف الارتباط الخاصة بحسابك فقط، وستحتاج إلى تسجيل الدخول مرة أخرى للوصول إلى TikTok Studio.</string>
+    <string name="settings_tiktok_logout_confirm_body">سيؤدي ذلك إلى إنهاء جلسة TikTok وحذف ملفات تعريف الارتباط الخاصة بهذا الملف الشخصي فقط، وستحتاج إلى تسجيل الدخول مرة أخرى للوصول إلى TikTok Studio.</string>
     <string name="settings_tiktok_logout_success">تم تسجيل الخروج من حساب TikTok بنجاح.</string>
+
+    <!-- Multiple Profiles -->
+    <string name="profile_picker_title">من يستخدم Tok Studio؟</string>
+    <string name="profile_picker_subtitle">يمتلك كل ملف شخصي مساحة تصفح وجلسة TikTok Studio وإعدادات وملفات تعريف ارتباط مستقلة تماماً.</string>
+    <string name="profile_add_new">إضافة ملف شخصي جديد</string>
+    <string name="profile_manage_button">إدارة الملفات الشخصية</string>
+    <string name="profile_manage_title">إدارة الملفات الشخصية</string>
+    <string name="profile_switcher_title">تبديل الملف الشخصي</string>
+    <string name="profile_switcher_cd">تبديل الملف الشخصي</string>
+    <string name="profile_open_picker">عرض شاشة اختيار الملف الشخصي</string>
+    <string name="profile_active_badge">نشط الآن</string>
+    <string name="profile_tabs_count">%1$d تبويب</string>
+    <string name="profile_empty_title">لا توجد ملفات شخصية بعد</string>
+    <string name="profile_empty_desc">أنشئ ملفك الشخصي الأول لفتح TikTok Studio في مساحة معزولة ومستقلة.</string>
+    <string name="profile_create_title">إنشاء ملف شخصي جديد</string>
+    <string name="profile_edit_title">تعديل الملف الشخصي</string>
+    <string name="profile_name_label">اسم الملف الشخصي</string>
+    <string name="profile_name_hint">مثال: حساب القناة الأولى</string>
+    <string name="profile_name_error">يرجى إدخال اسم للملف الشخصي.</string>
+    <string name="profile_color_label">اختر لون الملف</string>
+    <string name="profile_icon_label">اختر أيقونة الملف</string>
+    <string name="profile_create_confirm">إنشاء وفتح TikTok Studio</string>
+    <string name="profile_edit_confirm">حفظ التعديلات</string>
+    <string name="profile_edit_action">تعديل</string>
+    <string name="profile_delete_action">حذف</string>
+    <string name="profile_delete_confirm_title">هل تريد حذف «%1$s»؟</string>
+    <string name="profile_delete_confirm_body">سيتم حذف هذا الملف الشخصي وجميع ملفات تعريف الارتباط وجلسة TikTok والتبويبات والإعدادات الخاصة به فقط، ولن تتأثر أي ملفات شخصية أخرى.</string>
+    <string name="profile_deleted_message">تم حذف الملف الشخصي «%1$s».</string>
+    <string name="profile_isolation_active">عزل بيانات WebView الكامل مفعّل لكل ملف شخصي</string>
+    <string name="profile_isolation_limited">تحذير: إصدار WebView على هذا الجهاز لا يدعم تعدد مساحات التخزين (MULTI_PROFILE)، لذا يتم عزل الإعدادات والتبويبات فقط.</string>
+    <string name="profile_settings_banner_label">إعدادات الملف النشط</string>
+    <string name="profile_switch_shortcut">تبديل الملف</string>
 </resources>

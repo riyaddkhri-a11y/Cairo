@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -70,6 +71,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
+import com.example.data.BrowserProfile
 import com.example.data.UrlUtils
 import com.example.ui.theme.JetBrainsMonoFontFamily
 import com.example.ui.theme.NotoSansArabicFontFamily
@@ -86,6 +88,7 @@ fun BrowserToolbar(
     canGoForward: Boolean,
     tabCount: Int,
     isWideLayout: Boolean,
+    activeProfile: BrowserProfile? = null,
     onNavigateUrl: (String) -> Unit,
     onBack: () -> Unit,
     onForward: () -> Unit,
@@ -94,6 +97,7 @@ fun BrowserToolbar(
     onToggleDesktopMode: () -> Unit,
     onOpenTabs: () -> Unit,
     onOpenSettings: () -> Unit,
+    onOpenProfileSwitcher: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val focusManager = LocalFocusManager.current
@@ -161,6 +165,13 @@ fun BrowserToolbar(
                             contentDescription = stringResource(R.string.cd_home)
                         )
                     }
+                }
+
+                if (activeProfile != null) {
+                    ProfileSwitcherPill(
+                        profile = activeProfile,
+                        onClick = onOpenProfileSwitcher
+                    )
                 }
 
                 // Address Bar Pill
@@ -391,5 +402,50 @@ private fun ModeStatusBadge(
             overflow = TextOverflow.Ellipsis,
             color = contentColor
         )
+    }
+}
+
+@Composable
+private fun ProfileSwitcherPill(
+    profile: BrowserProfile,
+    onClick: () -> Unit
+) {
+    val switchLabel = stringResource(R.string.profile_switcher_cd)
+    Surface(
+        modifier = Modifier
+            .minimumInteractiveComponentSize()
+            .height(40.dp)
+            .widthIn(max = 122.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .clickable(onClick = onClick)
+            .semantics { contentDescription = "$switchLabel: ${profile.name}" }
+            .testTag("profile_switcher_button"),
+        shape = RoundedCornerShape(20.dp),
+        color = profile.profileColor.color.copy(alpha = 0.14f),
+        border = BorderStroke(1.dp, profile.profileColor.color.copy(alpha = 0.55f))
+    ) {
+        Row(
+            modifier = Modifier.padding(start = 5.dp, end = 9.dp, top = 4.dp, bottom = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            ProfileAvatar(
+                profileColor = profile.profileColor,
+                profileIcon = profile.profileIcon,
+                size = 28.dp,
+                iconSize = 16.dp
+            )
+            Text(
+                text = profile.name,
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontFamily = NotoSansArabicFontFamily,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 11.sp
+                ),
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
     }
 }

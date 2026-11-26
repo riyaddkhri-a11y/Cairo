@@ -7,7 +7,6 @@ import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
-import android.webkit.CookieManager
 import android.widget.FrameLayout
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -28,7 +27,6 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -58,8 +56,12 @@ import com.example.ui.BrowserUiState
 import com.example.ui.BrowserViewModel
 import com.example.ui.components.BrowserBottomBar
 import com.example.ui.components.BrowserToolbar
+import com.example.ui.components.CreateOrEditProfileDialog
 import com.example.ui.components.NetworkErrorOverlay
+import com.example.ui.components.ProfileSwitcherSheet
 import com.example.ui.components.TabSwitcherSheet
+import com.example.ui.screens.ManageProfilesScreen
+import com.example.ui.screens.ProfilePickerScreen
 import com.example.ui.screens.SettingsScreen
 import com.example.ui.screens.WelcomeScreen
 import com.example.ui.theme.DesktopBrowserTheme
@@ -85,12 +87,12 @@ class MainActivity : ComponentActivity() {
 
     override fun onPause() {
         super.onPause()
-        CookieManager.getInstance().flush()
+        viewModel.flushAllProfileCookies()
     }
 
     override fun onStop() {
         super.onStop()
-        CookieManager.getInstance().flush()
+        viewModel.flushAllProfileCookies()
     }
 }
 
@@ -136,7 +138,10 @@ fun DesktopBrowserApp(viewModel: BrowserViewModel) {
     val canHandleWebBack = activeTab != null &&
         (activeTab.canGoBack || (activeTab.isChildTab && uiState.tabs.size > 1))
 
-    val showWelcomeScreen = uiState.isInitialized && !uiState.settings.hasCompletedOnboarding
+    val showWelcomeScreen = uiState.isInitialized && !uiState.hasCompletedOnboarding
+    val showProfilePicker = uiState.isInitialized &&
+        uiState.hasCompletedOnboarding &&
+        (uiState.isProfilePickerOpen || uiState.activeProfile == null)
 
     BackHandler(enabled = uiState.fullscreenView != null) {
         viewModel.exitFullscreen()
@@ -144,11 +149,20 @@ fun DesktopBrowserApp(viewModel: BrowserViewModel) {
 
     BackHandler(
         enabled = !showWelcomeScreen &&
+            !showProfilePicker &&
+            !uiState.isManageProfilesOpen &&
             uiState.fullscreenView == null &&
             !uiState.isSettingsOpen &&
             canHandleWebBack
     ) {
         viewModel.goBack()
+    }
+
+    val tabCountByProfile = remember(uiState.tabsByProfile, uiState.profiles) {
+        uiState.profiles.associate { profile ->
+            val liveCount = uiState.tabsByProfile[profile.id]?.size ?: profile.tabs.size
+            profile.id to liveCount
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -159,8 +173,7 @@ fun DesktopBrowserApp(viewModel: BrowserViewModel) {
             containerColor = MaterialTheme.colorScheme.background,
             snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
         ) { innerPadding ->
-            // We handle statusBars/navigationBars inside BrowserToolbar and BrowserBottomBar
-            // so the WebView fills edge-to-edge cleanly between chrome bars.
+            // StatusBar/NavigationBar insets are handled directly by BrowserToolbar and BrowserBottomBar.
             @Suppress("UNUSED_VARIABLE")
             val unused = innerPadding
 
@@ -177,6 +190,7 @@ fun DesktopBrowserApp(viewModel: BrowserViewModel) {
                         canGoForward = activeTab?.canGoForward ?: false,
                         tabCount = uiState.tabs.size.coerceAtLeast(1),
                         isWideLayout = isWideLayout,
+                        activeProfile = uiState.activeProfile,
                         onNavigateUrl = viewModel::loadUrlInActiveTab,
                         onBack = { viewModel.goBack() },
                         onForward = viewModel::goForward,
@@ -186,7 +200,8 @@ fun DesktopBrowserApp(viewModel: BrowserViewModel) {
                             viewModel.setDesktopMode(!uiState.settings.desktopModeEnabled)
                         },
                         onOpenTabs = viewModel::openTabsSheet,
-                        onOpenSettings = viewModel::openSettings
+                        onOpenSettings = viewModel::openSettings,
+                        onOpenProfileSwitcher = viewModel::openProfileSwitcher
                     )
 
                     Box(
@@ -238,16 +253,18 @@ fun DesktopBrowserApp(viewModel: BrowserViewModel) {
             }
         }
 
-        // Settings Screen Overlay (keeps WebView mounted & live underneath)
+        // Settings Screen Overlay (keeps isolated WebViews mounted & live underneath)
         AnimatedVisibility(
-            visible = uiState.isSettingsOpen,
+            visible = uiState.isSettingsOpen && !showProfilePicker && !showWelcomeScreen,
             enter = slideInVertically(initialOffsetY = { it / 8 }) + fadeIn(),
             exit = slideOutVertically(targetOffsetY = { it / 8 }) + fadeOut()
         ) {
             SettingsScreen(
                 settings = uiState.settings,
+                activeProfile = uiState.activeProfile,
                 isTikTokLoggedIn = uiState.isTikTokLoggedIn,
                 onNavigateBack = viewModel::closeSettings,
+                onOpenProfileSwitcher = viewModel::openProfileSwitcher,
                 onOpenTikTokLogin = viewModel::openTikTokLogin,
                 onLogoutTikTok = viewModel::logoutTikTok,
                 onSaveHomepage = viewModel::saveHomepage,
@@ -278,6 +295,20 @@ fun DesktopBrowserApp(viewModel: BrowserViewModel) {
             )
         }
 
+        if (uiState.isProfileSwitcherOpen) {
+            ProfileSwitcherSheet(
+                profiles = uiState.profiles,
+                activeProfileId = uiState.activeProfileId,
+                loginStatusByProfile = uiState.tikTokLoginStatusByProfile,
+                tabCountByProfile = tabCountByProfile,
+                onSelectProfile = viewModel::selectProfile,
+                onAddNewProfile = viewModel::openCreateProfileDialog,
+                onManageProfiles = viewModel::openManageProfiles,
+                onOpenProfilePicker = viewModel::openProfilePicker,
+                onDismiss = viewModel::closeProfileSwitcher
+            )
+        }
+
         val fullscreenView = uiState.fullscreenView
         if (fullscreenView != null) {
             FullscreenVideoHost(
@@ -286,6 +317,51 @@ fun DesktopBrowserApp(viewModel: BrowserViewModel) {
             )
         }
 
+        // Chrome-style Profile Picker ("من يستخدم Tok Studio؟")
+        AnimatedVisibility(
+            visible = showProfilePicker && !showWelcomeScreen,
+            enter = fadeIn(tween(200)),
+            exit = fadeOut(tween(220))
+        ) {
+            ProfilePickerScreen(
+                profiles = uiState.profiles,
+                lastActiveProfileId = uiState.lastActiveProfileId,
+                loginStatusByProfile = uiState.tikTokLoginStatusByProfile,
+                tabCountByProfile = tabCountByProfile,
+                isMultiProfileIsolated = uiState.isMultiProfileIsolated,
+                onSelectProfile = viewModel::selectProfile,
+                onAddProfile = viewModel::openCreateProfileDialog,
+                onEditProfile = viewModel::openEditProfileDialog,
+                onManageProfiles = viewModel::openManageProfiles
+            )
+        }
+
+        // Manage Profiles Screen
+        AnimatedVisibility(
+            visible = uiState.isManageProfilesOpen && !showWelcomeScreen,
+            enter = slideInVertically(initialOffsetY = { it / 8 }) + fadeIn(),
+            exit = slideOutVertically(targetOffsetY = { it / 8 }) + fadeOut()
+        ) {
+            ManageProfilesScreen(
+                profiles = uiState.profiles,
+                activeProfileId = uiState.activeProfileId,
+                loginStatusByProfile = uiState.tikTokLoginStatusByProfile,
+                onNavigateBack = viewModel::closeManageProfiles,
+                onAddProfile = viewModel::openCreateProfileDialog,
+                onEditProfile = viewModel::openEditProfileDialog,
+                onDeleteProfile = viewModel::deleteProfile
+            )
+        }
+
+        if (uiState.isCreateProfileDialogOpen) {
+            CreateOrEditProfileDialog(
+                editingProfile = uiState.editingProfile,
+                onDismiss = viewModel::closeCreateOrEditProfileDialog,
+                onConfirm = viewModel::saveProfileFromDialog
+            )
+        }
+
+        // First-launch Welcome Screen
         AnimatedVisibility(
             visible = showWelcomeScreen,
             enter = fadeIn(tween(220)),
@@ -304,7 +380,10 @@ private fun WebViewHostContainer(
     viewModel: BrowserViewModel,
     modifier: Modifier = Modifier
 ) {
-    val activeWebView = viewModel.getWebViewForTab(uiState.activeTab?.id)
+    val activeWebView = viewModel.getWebViewForTab(
+        profileId = uiState.activeProfileId,
+        tabId = uiState.activeTab?.id
+    )
 
     AndroidView(
         factory = { ctx ->

@@ -74,7 +74,9 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import com.example.R
 import com.example.data.BrowserConstants
+import com.example.data.BrowserProfile
 import com.example.data.BrowserSettings
+import com.example.ui.components.ProfileAvatar
 import com.example.ui.theme.JetBrainsMonoFontFamily
 import com.example.ui.theme.SecureEmerald
 import com.example.ui.theme.TokStudioBlack
@@ -85,8 +87,10 @@ import com.example.ui.theme.TokStudioPink
 @Composable
 fun SettingsScreen(
     settings: BrowserSettings,
+    activeProfile: BrowserProfile? = null,
     isTikTokLoggedIn: Boolean = false,
     onNavigateBack: () -> Unit,
+    onOpenProfileSwitcher: () -> Unit = {},
     onOpenTikTokLogin: () -> Unit = {},
     onLogoutTikTok: () -> Unit = {},
     onSaveHomepage: (String) -> Boolean,
@@ -161,6 +165,51 @@ fun SettingsScreen(
                     .padding(horizontal = 16.dp, vertical = 20.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
+                if (activeProfile != null) {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(18.dp),
+                        color = activeProfile.profileColor.color.copy(alpha = 0.12f),
+                        border = BorderStroke(
+                            1.dp,
+                            activeProfile.profileColor.color.copy(alpha = 0.45f)
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 14.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            ProfileAvatar(
+                                profileColor = activeProfile.profileColor,
+                                profileIcon = activeProfile.profileIcon,
+                                size = 40.dp,
+                                iconSize = 20.dp
+                            )
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = stringResource(R.string.profile_settings_banner_label),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = activeProfile.name,
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                            TextButton(
+                                onClick = onOpenProfileSwitcher,
+                                modifier = Modifier.testTag("settings_switch_profile_button")
+                            ) {
+                                Text(stringResource(R.string.profile_switch_shortcut))
+                            }
+                        }
+                    }
+                }
+
                 // Section 0: TikTok Account Login & Session Status
                 TikTokAccountCard(
                     isLoggedIn = isTikTokLoggedIn,
@@ -722,7 +771,8 @@ private fun WebsiteZoomControlRow(
                 value = zoomPercent.toFloat(),
                 onValueChange = onZoomChange,
                 valueRange = BrowserConstants.MIN_ZOOM_PERCENT.toFloat()..BrowserConstants.MAX_ZOOM_PERCENT.toFloat(),
-                steps = 14,
+                steps = ((BrowserConstants.MAX_ZOOM_PERCENT - BrowserConstants.MIN_ZOOM_PERCENT) /
+                    BrowserConstants.ZOOM_STEP_PERCENT) - 1,
                 modifier = Modifier
                     .weight(1f)
                     .testTag("website_zoom_slider")

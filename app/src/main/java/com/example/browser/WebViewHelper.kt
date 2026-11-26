@@ -97,7 +97,11 @@ object WebViewConfig {
     }
 
     @SuppressLint("SetJavaScriptEnabled")
-    fun applySettings(webView: WebView, browserSettings: BrowserSettings) {
+    fun applySettings(
+        webView: WebView,
+        browserSettings: BrowserSettings,
+        cookieManager: CookieManager = CookieManager.getInstance()
+    ) {
         val settings = webView.settings
         settings.javaScriptEnabled = browserSettings.javaScriptEnabled
         settings.domStorageEnabled = true
@@ -135,7 +139,6 @@ object WebViewConfig {
         webView.scrollBarStyle = View.SCROLLBARS_INSIDE_OVERLAY
         webView.overScrollMode = View.OVER_SCROLL_ALWAYS
 
-        val cookieManager = CookieManager.getInstance()
         cookieManager.setAcceptCookie(true)
         cookieManager.setAcceptThirdPartyCookies(webView, true)
     }
@@ -157,14 +160,17 @@ object WebViewConfig {
         }
     }
 
-    fun clearAllBrowsingData(webViews: List<WebView>) {
+    fun clearAllBrowsingData(
+        webViews: List<WebView>,
+        cookieManager: CookieManager = CookieManager.getInstance(),
+        webStorage: WebStorage = WebStorage.getInstance()
+    ) {
         webViews.forEach { webView ->
             webView.clearCache(true)
             webView.clearHistory()
             webView.clearFormData()
         }
-        WebStorage.getInstance().deleteAllData()
-        val cookieManager = CookieManager.getInstance()
+        webStorage.deleteAllData()
         cookieManager.removeAllCookies(null)
         cookieManager.flush()
     }
@@ -210,7 +216,8 @@ object WebViewConfig {
         url: String,
         userAgent: String,
         contentDisposition: String,
-        mimeType: String
+        mimeType: String,
+        cookieManager: CookieManager = CookieManager.getInstance()
     ): Result<String> {
         val uri = Uri.parse(url)
         val scheme = uri.scheme?.lowercase()
@@ -224,7 +231,7 @@ object WebViewConfig {
             val fileName = URLUtil.guessFileName(url, contentDisposition, mimeType)
             val request = DownloadManager.Request(uri).apply {
                 setMimeType(mimeType)
-                val cookies = CookieManager.getInstance().getCookie(url)
+                val cookies = cookieManager.getCookie(url)
                 if (!cookies.isNullOrBlank()) {
                     addRequestHeader("Cookie", cookies)
                 }
@@ -246,45 +253,69 @@ object WebViewConfig {
 }
 
 interface WebViewHostCallbacks {
-    fun currentSettings(): BrowserSettings
-    fun onPageStarted(tabId: String, url: String)
-    fun onPageFinished(tabId: String, url: String, title: String, canGoBack: Boolean, canGoForward: Boolean)
-    fun onProgressChanged(tabId: String, progress: Int)
-    fun onTitleReceived(tabId: String, title: String)
-    fun onMainFrameError(tabId: String, error: WebErrorState)
+    fun currentSettings(profileId: String): BrowserSettings
+    fun onPageStarted(profileId: String, tabId: String, url: String)
+    fun onPageFinished(
+        profileId: String,
+        tabId: String,
+        url: String,
+        title: String,
+        canGoBack: Boolean,
+        canGoForward: Boolean
+    )
+    fun onProgressChanged(profileId: String, tabId: String, progress: Int)
+    fun onTitleReceived(profileId: String, tabId: String, title: String)
+    fun onMainFrameError(profileId: String, tabId: String, error: WebErrorState)
     fun onShowFileChooser(
+        profileId: String,
         callback: ValueCallback<Array<Uri>>,
         params: WebChromeClient.FileChooserParams?
     ): Boolean
-    fun onCreateChildWindow(resultMsg: Message?): Boolean
-    fun onCloseWindow(tabId: String)
+    fun onCreateChildWindow(profileId: String, resultMsg: Message?): Boolean
+    fun onCloseWindow(profileId: String, tabId: String)
     fun onShowCustomView(view: View?, callback: WebChromeClient.CustomViewCallback?)
     fun onHideCustomView()
-    fun onDownloadRequested(url: String, userAgent: String, contentDisposition: String, mimeType: String)
+    fun onDownloadRequested(
+        profileId: String,
+        url: String,
+        userAgent: String,
+        contentDisposition: String,
+        mimeType: String
+    )
     fun onOpenExternalUri(uri: Uri)
-    fun onRendererProcessGone(tabId: String, didCrash: Boolean)
-    fun onCookiesMaybeUpdated(tabId: String, url: String?)
+    fun onRendererProcessGone(profileId: String, tabId: String, didCrash: Boolean)
+    fun onCookiesMaybeUpdated(profileId: String, tabId: String, url: String?)
 }
 
 fun createConfiguredWebView(
     context: Context,
+    profileId: String,
+    webViewProfileName: String,
     tabId: String,
     callbacks: WebViewHostCallbacks,
     forceSoftwareLayer: Boolean = false
 ): WebView {
     return WebView(context).apply {
+        WebViewProfileEngine.bindWebViewToProfile(this, webViewProfileName)
+        val profileCookieManager = WebViewProfileEngine.cookieManagerForProfile(webViewProfileName)
+
         if (forceSoftwareLayer) {
             setLayerType(View.LAYER_TYPE_SOFTWARE, null)
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT, false)
         }
-        WebViewConfig.applySettings(this, callbacks.currentSettings())
+        WebViewConfig.applySettings(
+            webView = this,
+            browserSettings = callbacks.currentSettings(profileId),
+            cookieManager = profileCookieManager
+        )
 
         setDownloadListener { url, userAgent, contentDisposition, mimeType, _ ->
             callbacks.onDownloadRequested(
+                profileId = profileId,
                 url = url,
-                userAgent = userAgent ?: callbacks.currentSettings().let {
+                userAgent = userAgent ?: callbacks.currentSettings(profileId).let {
                     if (it.desktopModeEnabled) BrowserConstants.DESKTOP_USER_AGENT else BrowserConstants.MOBILE_USER_AGENT
                 },
                 contentDisposition = contentDisposition.orEmpty(),
@@ -315,33 +346,39 @@ fun createConfiguredWebView(
                     callbacks.onOpenExternalUri(targetUri)
                     return true
                 }
-                // Keep TikTok / third-party app-scheme redirects inside the desktop browser
                 return true
             }
 
             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                 super.onPageStarted(view, url, favicon)
                 if (!url.isNullOrBlank()) {
-                    callbacks.onPageStarted(tabId, url)
+                    callbacks.onPageStarted(profileId, tabId, url)
                 }
             }
 
             override fun onPageCommitVisible(view: WebView?, url: String?) {
                 super.onPageCommitVisible(view, url)
                 if (view != null) {
-                    WebViewConfig.injectDesktopViewportIfEnabled(view, callbacks.currentSettings())
+                    WebViewConfig.injectDesktopViewportIfEnabled(
+                        view,
+                        callbacks.currentSettings(profileId)
+                    )
                 }
-                TikTokSessionManager.flushCookies()
-                callbacks.onCookiesMaybeUpdated(tabId, url)
+                TikTokSessionManager.flushCookies(profileCookieManager)
+                callbacks.onCookiesMaybeUpdated(profileId, tabId, url)
             }
 
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
                 if (view != null) {
-                    WebViewConfig.injectDesktopViewportIfEnabled(view, callbacks.currentSettings())
-                    TikTokSessionManager.flushCookies()
-                    callbacks.onCookiesMaybeUpdated(tabId, url)
+                    WebViewConfig.injectDesktopViewportIfEnabled(
+                        view,
+                        callbacks.currentSettings(profileId)
+                    )
+                    TikTokSessionManager.flushCookies(profileCookieManager)
+                    callbacks.onCookiesMaybeUpdated(profileId, tabId, url)
                     callbacks.onPageFinished(
+                        profileId = profileId,
                         tabId = tabId,
                         url = url.orEmpty(),
                         title = view.title.orEmpty(),
@@ -354,8 +391,8 @@ fun createConfiguredWebView(
             override fun doUpdateVisitedHistory(view: WebView?, url: String?, isReload: Boolean) {
                 super.doUpdateVisitedHistory(view, url, isReload)
                 if (TikTokSessionManager.isTikTokUrl(url)) {
-                    TikTokSessionManager.flushCookies()
-                    callbacks.onCookiesMaybeUpdated(tabId, url)
+                    TikTokSessionManager.flushCookies(profileCookieManager)
+                    callbacks.onCookiesMaybeUpdated(profileId, tabId, url)
                 }
             }
 
@@ -375,6 +412,7 @@ fun createConfiguredWebView(
                         else -> context.getString(R.string.error_network_generic, code)
                     }
                     callbacks.onMainFrameError(
+                        profileId = profileId,
                         tabId = tabId,
                         error = WebErrorState(
                             title = context.getString(R.string.error_title),
@@ -393,6 +431,7 @@ fun createConfiguredWebView(
             ) {
                 handler?.cancel()
                 callbacks.onMainFrameError(
+                    profileId = profileId,
                     tabId = tabId,
                     error = WebErrorState(
                         title = context.getString(R.string.error_ssl_title),
@@ -412,19 +451,19 @@ fun createConfiguredWebView(
                 } else {
                     true
                 }
-                callbacks.onRendererProcessGone(tabId, didCrash)
+                callbacks.onRendererProcessGone(profileId, tabId, didCrash)
                 return true
             }
         }
 
         webChromeClient = object : WebChromeClient() {
             override fun onProgressChanged(view: WebView?, newProgress: Int) {
-                callbacks.onProgressChanged(tabId, newProgress)
+                callbacks.onProgressChanged(profileId, tabId, newProgress)
             }
 
             override fun onReceivedTitle(view: WebView?, title: String?) {
                 if (!title.isNullOrBlank()) {
-                    callbacks.onTitleReceived(tabId, title)
+                    callbacks.onTitleReceived(profileId, tabId, title)
                 }
             }
 
@@ -434,7 +473,7 @@ fun createConfiguredWebView(
                 fileChooserParams: FileChooserParams?
             ): Boolean {
                 if (filePathCallback == null) return false
-                return callbacks.onShowFileChooser(filePathCallback, fileChooserParams)
+                return callbacks.onShowFileChooser(profileId, filePathCallback, fileChooserParams)
             }
 
             override fun onCreateWindow(
@@ -443,11 +482,11 @@ fun createConfiguredWebView(
                 isUserGesture: Boolean,
                 resultMsg: Message?
             ): Boolean {
-                return callbacks.onCreateChildWindow(resultMsg)
+                return callbacks.onCreateChildWindow(profileId, resultMsg)
             }
 
             override fun onCloseWindow(window: WebView?) {
-                callbacks.onCloseWindow(tabId)
+                callbacks.onCloseWindow(profileId, tabId)
             }
 
             override fun onShowCustomView(view: View?, callback: CustomViewCallback?) {

@@ -6,10 +6,18 @@ import androidx.test.core.app.ApplicationProvider
 import com.example.browser.TikTokSessionManager
 import com.example.browser.WebViewConfig
 import com.example.data.BrowserConstants
+import com.example.data.BrowserPreferencesRepository
 import com.example.data.BrowserSettings
+import com.example.data.ProfileColor
+import com.example.data.ProfileIcon
+import com.example.data.ProfileSerialization
+import com.example.data.SavedTabState
 import com.example.data.UrlUtils
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -88,13 +96,14 @@ class ExampleRobolectricTest {
     }
 
     @Test
-    fun `website zoom snaps to 10 percent steps within 50 to 200 range`() {
+    fun `website zoom snaps to 10 percent steps within 50 to 400 range`() {
         assertEquals(100, BrowserSettings().websiteZoomPercent)
         assertEquals(50, BrowserConstants.snapZoomPercent(10f))
         assertEquals(50, BrowserConstants.snapZoomPercent(54f))
         assertEquals(60, BrowserConstants.snapZoomPercent(55f))
         assertEquals(130, BrowserConstants.snapZoomPercent(133f))
-        assertEquals(200, BrowserConstants.snapZoomPercent(250f))
+        assertEquals(250, BrowserConstants.snapZoomPercent(250f))
+        assertEquals(400, BrowserConstants.snapZoomPercent(550f))
     }
 
     @Test
@@ -172,5 +181,98 @@ class ExampleRobolectricTest {
         assertFalse(TikTokSessionManager.isLoggedIn(cookieManager))
         val otherSiteCookies = cookieManager.getCookie("https://example.com")
         assertTrue(otherSiteCookies?.contains("other_site=keep_me") == true)
+    }
+
+    @Test
+    fun `multi profile picker and management Arabic strings match requirements`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        assertEquals("من يستخدم Tok Studio؟", context.getString(R.string.profile_picker_title))
+        assertEquals("إضافة ملف شخصي جديد", context.getString(R.string.profile_add_new))
+        assertEquals("إدارة الملفات الشخصية", context.getString(R.string.profile_manage_button))
+        assertEquals("تبديل الملف الشخصي", context.getString(R.string.profile_switcher_title))
+    }
+
+    @Test
+    fun `multiple profiles persist independently across restarts without mixing settings or tabs`() = runTest {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val repo = BrowserPreferencesRepository(context)
+        repo.ensureDefaultProfileMigrated()
+
+        val profile1 = repo.createProfile("حساب أول", ProfileColor.CYAN.id, ProfileIcon.VIDEOCAM.id)
+        val profile2 = repo.createProfile("حساب ثاني", ProfileColor.PINK.id, ProfileIcon.STORE.id)
+        val profile3 = repo.createProfile("حساب ثالث", ProfileColor.EMERALD.id, ProfileIcon.STAR.id)
+
+        assertNotEquals(profile1.webViewProfileName, profile2.webViewProfileName)
+        assertNotEquals(profile2.webViewProfileName, profile3.webViewProfileName)
+        assertEquals(BrowserConstants.DEFAULT_WEBVIEW_PROFILE_NAME, "Default")
+
+        // Customize Profile 1 independently
+        repo.updateProfileSettings(profile1.id) {
+            it.copy(
+                websiteZoomPercent = 160,
+                desktopModeEnabled = true,
+                homepageUrl = "https://www.tiktok.com/tiktokstudio"
+            )
+        }
+        repo.saveProfileTabs(
+            profileId = profile1.id,
+            tabs = listOf(SavedTabState("tab1", "https://www.tiktok.com/tiktokstudio", "Studio 1")),
+            activeTabId = "tab1"
+        )
+
+        // Customize Profile 2 independently
+        repo.updateProfileSettings(profile2.id) {
+            it.copy(
+                websiteZoomPercent = 80,
+                desktopModeEnabled = false,
+                homepageUrl = "https://example.com/creator2"
+            )
+        }
+        repo.saveProfileTabs(
+            profileId = profile2.id,
+            tabs = listOf(SavedTabState("tab2", "https://example.com/creator2", "Creator 2")),
+            activeTabId = "tab2"
+        )
+
+        // Rename & recolor Profile 2
+        repo.updateProfileAppearance(profile2.id, "حساب محدث", ProfileColor.AMBER.id, ProfileIcon.WORK.id)
+
+        // Delete Profile 3 and verify Profile 1, Profile 2, and Default remain intact
+        repo.deleteProfile(profile3.id)
+
+        // Simulate reopening the app with a fresh repository read
+        val reopenedRepo = BrowserPreferencesRepository(context)
+        val reopenedState = reopenedRepo.appStateFlow.first()
+
+        assertNull(reopenedState.profiles.firstOrNull { it.id == profile3.id })
+        val restored1 = reopenedState.profiles.first { it.id == profile1.id }
+        val restored2 = reopenedState.profiles.first { it.id == profile2.id }
+
+        assertEquals(160, restored1.settings.websiteZoomPercent)
+        assertTrue(restored1.settings.desktopModeEnabled)
+        assertEquals("https://www.tiktok.com/tiktokstudio", restored1.settings.homepageUrl)
+        assertEquals("tab1", restored1.activeTabId)
+        assertEquals(listOf(SavedTabState("tab1", "https://www.tiktok.com/tiktokstudio", "Studio 1")), restored1.tabs)
+
+        assertEquals("حساب محدث", restored2.name)
+        assertEquals(ProfileColor.AMBER.id, restored2.colorId)
+        assertEquals(ProfileIcon.WORK.id, restored2.iconId)
+        assertEquals(80, restored2.settings.websiteZoomPercent)
+        assertFalse(restored2.settings.desktopModeEnabled)
+        assertEquals("https://example.com/creator2", restored2.settings.homepageUrl)
+        assertEquals("tab2", restored2.activeTabId)
+        assertEquals(listOf(SavedTabState("tab2", "https://example.com/creator2", "Creator 2")), restored2.tabs)
+
+        // Verify round-trip JSON serialization preserves all profile fields
+        val encoded = ProfileSerialization.encodeProfiles(reopenedState.profiles)
+        val decoded = ProfileSerialization.decodeProfiles(encoded)
+        assertEquals(reopenedState.profiles, decoded)
+    }
+
+    @Test
+    fun `file chooser intent builder creates video upload intent`() {
+        val intent = WebViewConfig.buildFileChooserIntent(null)
+        assertEquals(android.content.Intent.ACTION_GET_CONTENT, intent.action)
+        assertEquals("*/*", intent.type)
     }
 }
