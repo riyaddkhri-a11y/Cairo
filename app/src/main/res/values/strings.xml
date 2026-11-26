@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">متصفح سطح المكتب</string>
+    <string name="app_name">Tok Studio</string>
 
     <!-- Toolbar & Navigation -->
     <string name="cd_back">رجوع</string>
@@ -81,4 +81,23 @@
     <string name="file_picker_title">اختيار ملف أو فيديو</string>
     <string name="file_picker_unavailable">لم يتم العثور على تطبيق متوافق لاختيار الملفات على هذا الجهاز.</string>
     <string name="fullscreen_exit_hint">اضغط رجوع للخروج من وضع ملء الشاشة</string>
+
+    <!-- Welcome Screen -->
+    <string name="welcome_icon_cd">شعار تطبيق Tok Studio</string>
+    <string name="welcome_title">مرحباً بك في Tok Studio 👋</string>
+    <string name="welcome_description">التطبيق الذي يساعدك على فحص فيديوهاتك قبل نشرها على TikTok، واكتشاف المحتوى الذي قد يعرّض فيديوهاتك للحذف أو البلاغات أو مخالفات إرشادات المجتمع.</string>
+    <string name="welcome_extra_message">افحص فيديوهاتك مسبقاً، وتعرّف على المخاطر المحتملة، وانشر محتواك بثقة أكبر.</string>
+    <string name="welcome_start_button">ابدأ الآن</string>
+
+    <!-- TikTok Account Login -->
+    <string name="settings_section_tiktok_account">حساب TikTok</string>
+    <string name="settings_tiktok_status_label">حالة الحساب</string>
+    <string name="settings_tiktok_logged_in">تم تسجيل الدخول</string>
+    <string name="settings_tiktok_logged_out">لم يتم تسجيل الدخول</string>
+    <string name="settings_tiktok_login_desc">سجّل الدخول عبر صفحة TikTok الرسمية داخل المتصفح نفسه، مع حفظ ملفات تعريف الارتباط وبيانات الجلسة بشكل دائم وآمن دون تخزين كلمة المرور.</string>
+    <string name="settings_tiktok_login_button">تسجيل الدخول إلى TikTok</string>
+    <string name="settings_tiktok_logout_button">تسجيل الخروج</string>
+    <string name="settings_tiktok_logout_confirm_title">هل تريد تسجيل الخروج من TikTok؟</string>
+    <string name="settings_tiktok_logout_confirm_body">سيؤدي ذلك إلى إنهاء جلسة TikTok وحذف ملفات تعريف الارتباط الخاصة بحسابك فقط، وستحتاج إلى تسجيل الدخول مرة أخرى للوصول إلى TikTok Studio.</string>
+    <string name="settings_tiktok_logout_success">تم تسجيل الخروج من حساب TikTok بنجاح.</string>
 </resources>

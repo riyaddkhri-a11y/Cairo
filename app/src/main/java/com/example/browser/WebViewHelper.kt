@@ -263,6 +263,7 @@ interface WebViewHostCallbacks {
     fun onDownloadRequested(url: String, userAgent: String, contentDisposition: String, mimeType: String)
     fun onOpenExternalUri(uri: Uri)
     fun onRendererProcessGone(tabId: String, didCrash: Boolean)
+    fun onCookiesMaybeUpdated(tabId: String, url: String?)
 }
 
 fun createConfiguredWebView(
@@ -330,13 +331,16 @@ fun createConfiguredWebView(
                 if (view != null) {
                     WebViewConfig.injectDesktopViewportIfEnabled(view, callbacks.currentSettings())
                 }
+                TikTokSessionManager.flushCookies()
+                callbacks.onCookiesMaybeUpdated(tabId, url)
             }
 
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
                 if (view != null) {
                     WebViewConfig.injectDesktopViewportIfEnabled(view, callbacks.currentSettings())
-                    CookieManager.getInstance().flush()
+                    TikTokSessionManager.flushCookies()
+                    callbacks.onCookiesMaybeUpdated(tabId, url)
                     callbacks.onPageFinished(
                         tabId = tabId,
                         url = url.orEmpty(),
@@ -344,6 +348,14 @@ fun createConfiguredWebView(
                         canGoBack = view.canGoBack(),
                         canGoForward = view.canGoForward()
                     )
+                }
+            }
+
+            override fun doUpdateVisitedHistory(view: WebView?, url: String?, isReload: Boolean) {
+                super.doUpdateVisitedHistory(view, url, isReload)
+                if (TikTokSessionManager.isTikTokUrl(url)) {
+                    TikTokSessionManager.flushCookies()
+                    callbacks.onCookiesMaybeUpdated(tabId, url)
                 }
             }
 

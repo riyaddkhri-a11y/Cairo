@@ -17,6 +17,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -60,6 +61,7 @@ import com.example.ui.components.BrowserToolbar
 import com.example.ui.components.NetworkErrorOverlay
 import com.example.ui.components.TabSwitcherSheet
 import com.example.ui.screens.SettingsScreen
+import com.example.ui.screens.WelcomeScreen
 import com.example.ui.theme.DesktopBrowserTheme
 
 class MainActivity : ComponentActivity() {
@@ -134,11 +136,18 @@ fun DesktopBrowserApp(viewModel: BrowserViewModel) {
     val canHandleWebBack = activeTab != null &&
         (activeTab.canGoBack || (activeTab.isChildTab && uiState.tabs.size > 1))
 
+    val showWelcomeScreen = uiState.isInitialized && !uiState.settings.hasCompletedOnboarding
+
     BackHandler(enabled = uiState.fullscreenView != null) {
         viewModel.exitFullscreen()
     }
 
-    BackHandler(enabled = uiState.fullscreenView == null && !uiState.isSettingsOpen && canHandleWebBack) {
+    BackHandler(
+        enabled = !showWelcomeScreen &&
+            uiState.fullscreenView == null &&
+            !uiState.isSettingsOpen &&
+            canHandleWebBack
+    ) {
         viewModel.goBack()
     }
 
@@ -237,7 +246,10 @@ fun DesktopBrowserApp(viewModel: BrowserViewModel) {
         ) {
             SettingsScreen(
                 settings = uiState.settings,
+                isTikTokLoggedIn = uiState.isTikTokLoggedIn,
                 onNavigateBack = viewModel::closeSettings,
+                onOpenTikTokLogin = viewModel::openTikTokLogin,
+                onLogoutTikTok = viewModel::logoutTikTok,
                 onSaveHomepage = viewModel::saveHomepage,
                 onResetHomepage = viewModel::resetHomepageToDefault,
                 onToggleDesktopMode = viewModel::setDesktopMode,
@@ -271,6 +283,16 @@ fun DesktopBrowserApp(viewModel: BrowserViewModel) {
             FullscreenVideoHost(
                 customView = fullscreenView,
                 modifier = Modifier.fillMaxSize()
+            )
+        }
+
+        AnimatedVisibility(
+            visible = showWelcomeScreen,
+            enter = fadeIn(tween(220)),
+            exit = fadeOut(tween(260)) + slideOutVertically(tween(260)) { -it / 12 }
+        ) {
+            WelcomeScreen(
+                onStartClick = viewModel::completeOnboarding
             )
         }
     }

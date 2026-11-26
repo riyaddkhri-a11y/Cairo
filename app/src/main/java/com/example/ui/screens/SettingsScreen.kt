@@ -22,10 +22,15 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.Login
+import androidx.compose.material.icons.automirrored.rounded.Logout
+import androidx.compose.material.icons.rounded.AccountCircle
+import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Code
 import androidx.compose.material.icons.rounded.DeleteSweep
 import androidx.compose.material.icons.rounded.DesktopWindows
 import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.PersonOutline
 import androidx.compose.material.icons.rounded.RestartAlt
 import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.Terminal
@@ -38,6 +43,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
@@ -56,10 +62,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextDirection
@@ -68,12 +76,19 @@ import com.example.R
 import com.example.data.BrowserConstants
 import com.example.data.BrowserSettings
 import com.example.ui.theme.JetBrainsMonoFontFamily
+import com.example.ui.theme.SecureEmerald
+import com.example.ui.theme.TokStudioBlack
+import com.example.ui.theme.TokStudioCyan
+import com.example.ui.theme.TokStudioPink
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     settings: BrowserSettings,
+    isTikTokLoggedIn: Boolean = false,
     onNavigateBack: () -> Unit,
+    onOpenTikTokLogin: () -> Unit = {},
+    onLogoutTikTok: () -> Unit = {},
     onSaveHomepage: (String) -> Boolean,
     onResetHomepage: () -> String,
     onToggleDesktopMode: (Boolean) -> Unit,
@@ -89,6 +104,7 @@ fun SettingsScreen(
     var homepageDraft by remember { mutableStateOf(settings.homepageUrl) }
     var showInvalidError by remember { mutableStateOf(false) }
     var showClearDataDialog by remember { mutableStateOf(false) }
+    var showTikTokLogoutDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(settings.homepageUrl) {
         homepageDraft = settings.homepageUrl
@@ -145,6 +161,13 @@ fun SettingsScreen(
                     .padding(horizontal = 16.dp, vertical = 20.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
+                // Section 0: TikTok Account Login & Session Status
+                TikTokAccountCard(
+                    isLoggedIn = isTikTokLoggedIn,
+                    onLoginClick = onOpenTikTokLogin,
+                    onLogoutClick = { showTikTokLogoutDialog = true }
+                )
+
                 // Section 1: Startup & Homepage
                 SettingsSectionCard(
                     title = stringResource(R.string.settings_section_startup),
@@ -369,6 +392,208 @@ fun SettingsScreen(
                 }
             }
         )
+    }
+
+    if (showTikTokLogoutDialog) {
+        AlertDialog(
+            onDismissRequest = { showTikTokLogoutDialog = false },
+            title = { Text(stringResource(R.string.settings_tiktok_logout_confirm_title)) },
+            text = { Text(stringResource(R.string.settings_tiktok_logout_confirm_body)) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showTikTokLogoutDialog = false
+                        onLogoutTikTok()
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = TokStudioPink,
+                        contentColor = MaterialTheme.colorScheme.onError
+                    ),
+                    modifier = Modifier.testTag("confirm_tiktok_logout_button")
+                ) {
+                    Text(stringResource(R.string.settings_tiktok_logout_button))
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showTikTokLogoutDialog = false },
+                    modifier = Modifier.testTag("cancel_tiktok_logout_button")
+                ) {
+                    Text(stringResource(R.string.settings_cancel))
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun TikTokAccountCard(
+    isLoggedIn: Boolean,
+    onLoginClick: () -> Unit,
+    onLogoutClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 2.dp,
+        border = BorderStroke(
+            width = 1.2.dp,
+            brush = Brush.linearGradient(
+                colors = listOf(
+                    TokStudioCyan.copy(alpha = 0.55f),
+                    TokStudioPink.copy(alpha = 0.55f)
+                )
+            )
+        )
+    ) {
+        Column(modifier = Modifier.padding(18.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.AccountCircle,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Text(
+                        text = stringResource(R.string.settings_section_tiktok_account),
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(999.dp),
+                    color = if (isLoggedIn) {
+                        SecureEmerald.copy(alpha = 0.14f)
+                    } else {
+                        MaterialTheme.colorScheme.surfaceVariant
+                    },
+                    border = BorderStroke(
+                        width = 1.dp,
+                        color = if (isLoggedIn) {
+                            SecureEmerald.copy(alpha = 0.45f)
+                        } else {
+                            MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)
+                        }
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (isLoggedIn) {
+                                Icons.Rounded.CheckCircle
+                            } else {
+                                Icons.Rounded.PersonOutline
+                            },
+                            contentDescription = stringResource(R.string.settings_tiktok_status_label),
+                            tint = if (isLoggedIn) {
+                                SecureEmerald
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            text = stringResource(
+                                if (isLoggedIn) {
+                                    R.string.settings_tiktok_logged_in
+                                } else {
+                                    R.string.settings_tiktok_logged_out
+                                }
+                            ),
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                fontWeight = FontWeight.SemiBold
+                            ),
+                            color = if (isLoggedIn) {
+                                SecureEmerald
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                            modifier = Modifier.testTag("tiktok_account_status_text")
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Text(
+                text = stringResource(R.string.settings_tiktok_login_desc),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Button(
+                onClick = onLoginClick,
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = TokStudioCyan,
+                    contentColor = TokStudioBlack
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .minimumInteractiveComponentSize()
+                    .height(48.dp)
+                    .testTag("tiktok_login_button")
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Rounded.Login,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = stringResource(R.string.settings_tiktok_login_button),
+                    style = MaterialTheme.typography.labelLarge.copy(
+                        fontWeight = FontWeight.Bold
+                    )
+                )
+            }
+
+            if (isLoggedIn) {
+                Spacer(modifier = Modifier.height(10.dp))
+                OutlinedButton(
+                    onClick = onLogoutClick,
+                    shape = RoundedCornerShape(14.dp),
+                    border = BorderStroke(1.dp, TokStudioPink.copy(alpha = 0.65f)),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = TokStudioPink
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .minimumInteractiveComponentSize()
+                        .height(48.dp)
+                        .testTag("tiktok_logout_button")
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Rounded.Logout,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = stringResource(R.string.settings_tiktok_logout_button),
+                        style = MaterialTheme.typography.labelLarge.copy(
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    )
+                }
+            }
+        }
     }
 }
 

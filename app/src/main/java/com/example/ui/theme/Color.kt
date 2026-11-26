@@ -44,3 +44,8 @@ val SlateOnSurfaceVariant = Color(0xFF475569)
 val SecureEmerald = Color(0xFF10B981)
 val WarningAmber = Color(0xFFF59E0B)
 val ErrorRose = Color(0xFFEF4444)
+
+// Tok Studio Brand Accents
+val TokStudioBlack = Color(0xFF000000)
+val TokStudioCyan = Color(0xFF00F2EA)
+val TokStudioPink = Color(0xFFFF0050)

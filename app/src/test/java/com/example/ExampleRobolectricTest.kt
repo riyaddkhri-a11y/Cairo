@@ -1,7 +1,9 @@
 package com.example
 
 import android.content.Context
+import android.webkit.CookieManager
 import androidx.test.core.app.ApplicationProvider
+import com.example.browser.TikTokSessionManager
 import com.example.browser.WebViewConfig
 import com.example.data.BrowserConstants
 import com.example.data.BrowserSettings
@@ -20,10 +22,10 @@ import org.robolectric.annotation.Config
 class ExampleRobolectricTest {
 
     @Test
-    fun `app name matches Arabic localization`() {
+    fun `app name matches Tok Studio`() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val appName = context.getString(R.string.app_name)
-        assertEquals("متصفح سطح المكتب", appName)
+        assertEquals("Tok Studio", appName)
     }
 
     @Test
@@ -121,5 +123,54 @@ class ExampleRobolectricTest {
         val context = ApplicationProvider.getApplicationContext<Context>()
         assertEquals("حجم عرض المواقع", context.getString(R.string.settings_zoom_title))
         assertEquals("إعادة ضبط الحجم", context.getString(R.string.settings_zoom_reset))
+    }
+
+    @Test
+    fun `welcome screen defaults to shown on first launch and matches Arabic text`() {
+        assertFalse(BrowserSettings().hasCompletedOnboarding)
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        assertEquals("مرحباً بك في Tok Studio 👋", context.getString(R.string.welcome_title))
+        assertEquals("ابدأ الآن", context.getString(R.string.welcome_start_button))
+    }
+
+    @Test
+    fun `tiktok login constants and Arabic strings match requirements`() {
+        assertEquals("https://www.tiktok.com/login", BrowserConstants.TIKTOK_LOGIN_URL)
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        assertEquals("تسجيل الدخول إلى TikTok", context.getString(R.string.settings_tiktok_login_button))
+        assertEquals("تم تسجيل الدخول", context.getString(R.string.settings_tiktok_logged_in))
+        assertEquals("لم يتم تسجيل الدخول", context.getString(R.string.settings_tiktok_logged_out))
+        assertEquals("تسجيل الخروج", context.getString(R.string.settings_tiktok_logout_button))
+    }
+
+    @Test
+    fun `tiktok session cookie detector distinguishes authenticated and anonymous cookies`() {
+        assertFalse(TikTokSessionManager.hasActiveSessionCookies(null))
+        assertFalse(TikTokSessionManager.hasActiveSessionCookies("ttwid=abc123; msToken=xyz"))
+        assertFalse(TikTokSessionManager.hasActiveSessionCookies("sessionid=; sid_tt=deleted"))
+        assertTrue(TikTokSessionManager.hasActiveSessionCookies("ttwid=abc123; sessionid=real_session_token"))
+        assertTrue(TikTokSessionManager.hasActiveSessionCookies("sid_tt=token_value; uid_tt=12345"))
+    }
+
+    @Test
+    fun `tiktok session persists across login and studio urls and clears cleanly on logout`() {
+        val cookieManager = CookieManager.getInstance()
+        cookieManager.removeAllCookies(null)
+        cookieManager.setAcceptCookie(true)
+        cookieManager.setCookie("https://example.com", "other_site=keep_me; Path=/")
+        cookieManager.setCookie(
+            BrowserConstants.TIKTOK_LOGIN_URL,
+            "sessionid=persisted_token_123; Domain=.tiktok.com; Path=/; Secure"
+        )
+        TikTokSessionManager.flushCookies(cookieManager)
+
+        assertTrue(TikTokSessionManager.isLoggedIn(cookieManager))
+        val studioCookies = cookieManager.getCookie(BrowserConstants.DEFAULT_HOMEPAGE_URL)
+        assertTrue(TikTokSessionManager.hasActiveSessionCookies(studioCookies))
+
+        TikTokSessionManager.clearTikTokSession(cookieManager)
+        assertFalse(TikTokSessionManager.isLoggedIn(cookieManager))
+        val otherSiteCookies = cookieManager.getCookie("https://example.com")
+        assertTrue(otherSiteCookies?.contains("other_site=keep_me") == true)
     }
 }

@@ -10,10 +10,12 @@ import android.view.View
 import android.view.ViewGroup
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
+import android.webkit.WebStorage
 import android.webkit.WebView
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.R
+import com.example.browser.TikTokSessionManager
 import com.example.browser.WebErrorState
 import com.example.browser.WebViewConfig
 import com.example.browser.WebViewHostCallbacks
@@ -54,7 +56,8 @@ data class BrowserUiState(
     val activeTabId: String? = null,
     val isSettingsOpen: Boolean = false,
     val isTabsSheetOpen: Boolean = false,
-    val fullscreenView: View? = null
+    val fullscreenView: View? = null,
+    val isTikTokLoggedIn: Boolean = false
 ) {
     val activeTab: BrowserTabUi?
         get() = tabs.firstOrNull { it.id == activeTabId } ?: tabs.firstOrNull()
@@ -87,7 +90,14 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     init {
         viewModelScope.launch {
             val initialSettings = repository.settingsFlow.first()
-            _uiState.update { it.copy(settings = initialSettings, isInitialized = true) }
+            val loggedIn = TikTokSessionManager.isLoggedIn()
+            _uiState.update {
+                it.copy(
+                    settings = initialSettings,
+                    isInitialized = true,
+                    isTikTokLoggedIn = loggedIn
+                )
+            }
             maybeOpenInitialTab()
 
             repository.settingsFlow.collect { updated ->
@@ -287,6 +297,10 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
                 recoveredView.loadUrl(currentTab.url)
             }
         }
+
+        override fun onCookiesMaybeUpdated(tabId: String, url: String?) {
+            refreshTikTokLoginStatus()
+        }
     }
 
     private fun createTabInternal(
@@ -449,11 +463,44 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun openSettings() {
+        refreshTikTokLoginStatus()
         _uiState.update { it.copy(isSettingsOpen = true, isTabsSheetOpen = false) }
     }
 
     fun closeSettings() {
         _uiState.update { it.copy(isSettingsOpen = false) }
+    }
+
+    fun openTikTokLogin() {
+        _uiState.update { it.copy(isSettingsOpen = false, isTabsSheetOpen = false) }
+        val activeTab = _uiState.value.activeTab
+        if (activeTab == null || webViews[activeTab.id] == null) {
+            openNewTab(initialUrl = BrowserConstants.TIKTOK_LOGIN_URL, switchToTab = true)
+        } else {
+            loadUrlInActiveTab(BrowserConstants.TIKTOK_LOGIN_URL)
+        }
+    }
+
+    fun logoutTikTok() {
+        TikTokSessionManager.clearTikTokSession()
+        runCatching {
+            WebStorage.getInstance().deleteOrigin("https://www.tiktok.com")
+            WebStorage.getInstance().deleteOrigin("https://tiktok.com")
+        }
+        _uiState.update { it.copy(isTikTokLoggedIn = false) }
+        val activeTab = _uiState.value.activeTab
+        if (activeTab != null && TikTokSessionManager.isTikTokUrl(activeTab.url)) {
+            webViews[activeTab.id]?.reload()
+        }
+        val app = getApplication<Application>()
+        _snackbarMessages.tryEmit(app.getString(R.string.settings_tiktok_logout_success))
+    }
+
+    fun refreshTikTokLoginStatus() {
+        val loggedIn = TikTokSessionManager.isLoggedIn()
+        if (_uiState.value.isTikTokLoggedIn != loggedIn) {
+            _uiState.update { it.copy(isTikTokLoggedIn = loggedIn) }
+        }
     }
 
     fun openTabsSheet() {
@@ -516,11 +563,21 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         setWebsiteZoomPercent(BrowserConstants.DEFAULT_ZOOM_PERCENT.toFloat())
     }
 
+    fun completeOnboarding() {
+        val current = _uiState.value.settings
+        if (current.hasCompletedOnboarding) return
+        _uiState.update { it.copy(settings = current.copy(hasCompletedOnboarding = true)) }
+        viewModelScope.launch {
+            repository.setOnboardingCompleted(true)
+        }
+    }
+
     fun clearBrowsingData() {
         WebViewConfig.clearAllBrowsingData(webViews.values.toList())
         _uiState.update { state ->
             state.copy(
-                tabs = state.tabs.map { it.copy(canGoBack = false, canGoForward = false) }
+                tabs = state.tabs.map { it.copy(canGoBack = false, canGoForward = false) },
+                isTikTokLoggedIn = false
             )
         }
         val app = getApplication<Application>()
@@ -575,6 +632,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
 
     override fun onCleared() {
         super.onCleared()
+        TikTokSessionManager.flushCookies()
         filePathCallback?.onReceiveValue(null)
         filePathCallback = null
         webViews.values.forEach { webView ->

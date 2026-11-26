@@ -23,11 +23,13 @@ data class BrowserSettings(
     val homepageUrl: String = BrowserConstants.DEFAULT_HOMEPAGE_URL,
     val desktopModeEnabled: Boolean = true,
     val javaScriptEnabled: Boolean = true,
-    val websiteZoomPercent: Int = BrowserConstants.DEFAULT_ZOOM_PERCENT
+    val websiteZoomPercent: Int = BrowserConstants.DEFAULT_ZOOM_PERCENT,
+    val hasCompletedOnboarding: Boolean = false
 )
 
 object BrowserConstants {
     const val DEFAULT_HOMEPAGE_URL = "https://www.tiktok.com/tiktokstudio"
+    const val TIKTOK_LOGIN_URL = "https://www.tiktok.com/login"
 
     const val MIN_ZOOM_PERCENT = 50
     const val MAX_ZOOM_PERCENT = 200
@@ -104,6 +106,7 @@ class BrowserPreferencesRepository(private val context: Context) {
         val DESKTOP_MODE = booleanPreferencesKey("desktop_mode_enabled")
         val JAVASCRIPT_ENABLED = booleanPreferencesKey("javascript_enabled")
         val WEBSITE_ZOOM_PERCENT = intPreferencesKey("website_zoom_percent")
+        val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
     }
 
     val settingsFlow: Flow<BrowserSettings> = context.browserDataStore.data.map { prefs ->
@@ -112,7 +115,8 @@ class BrowserPreferencesRepository(private val context: Context) {
             homepageUrl = prefs[Keys.HOMEPAGE_URL] ?: BrowserConstants.DEFAULT_HOMEPAGE_URL,
             desktopModeEnabled = prefs[Keys.DESKTOP_MODE] ?: true,
             javaScriptEnabled = prefs[Keys.JAVASCRIPT_ENABLED] ?: true,
-            websiteZoomPercent = BrowserConstants.snapZoomPercent(rawZoom.toFloat())
+            websiteZoomPercent = BrowserConstants.snapZoomPercent(rawZoom.toFloat()),
+            hasCompletedOnboarding = prefs[Keys.ONBOARDING_COMPLETED] ?: false
         )
     }
 
@@ -138,6 +142,12 @@ class BrowserPreferencesRepository(private val context: Context) {
         val normalized = BrowserConstants.snapZoomPercent(percent.toFloat())
         context.browserDataStore.edit { prefs ->
             prefs[Keys.WEBSITE_ZOOM_PERCENT] = normalized
+        }
+    }
+
+    suspend fun setOnboardingCompleted(completed: Boolean) {
+        context.browserDataStore.edit { prefs ->
+            prefs[Keys.ONBOARDING_COMPLETED] = completed
         }
     }
 }

@@ -1,5 +1,5 @@
 {
-  "name": "متصفح سطح المكتب",
+  "name": "Tok Studio",
   "description": "متصفح أندرويد خفيف بوضع سطح المكتب الحقيقي وصفحة رئيسية قابلة للتخصيص ودعم رفع الملفات والفيديوهات وحفظ الجلسات.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
