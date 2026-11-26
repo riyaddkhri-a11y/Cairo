@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">متصفح سطح المكتب</string>
+
+    <!-- Toolbar & Navigation -->
+    <string name="cd_back">رجوع</string>
+    <string name="cd_forward">تقدم</string>
+    <string name="cd_refresh">تحديث</string>
+    <string name="cd_stop_loading">إيقاف التحميل</string>
+    <string name="cd_home">الرئيسية</string>
+    <string name="cd_settings">الإعدادات</string>
+    <string name="cd_tabs">علامات التبويب</string>
+    <string name="cd_clear_url">مسح العنوان</string>
+    <string name="cd_security_https">اتصال آمن</string>
+    <string name="cd_security_http">اتصال غير مشفر</string>
+    <string name="cd_desktop_badge">وضع سطح المكتب</string>
+    <string name="cd_mobile_badge">وضع الهاتف</string>
+    <string name="address_bar_placeholder">ابحث أو أدخل رابط الموقع…</string>
+    <string name="badge_desktop">وضع سطح المكتب</string>
+    <string name="badge_mobile">وضع الهاتف</string>
+    <string name="loading_status">جارٍ التحميل</string>
+    <string name="action_go">فتح الموقع</string>
+
+    <!-- Tabs Sheet -->
+    <string name="tabs_title">علامات التبويب</string>
+    <string name="tabs_new_tab">علامة تبويب جديدة</string>
+    <string name="tabs_close_tab">إغلاق علامة التبويب</string>
+    <string name="tabs_untitled">علامة تبويب جديدة</string>
+
+    <!-- Network Error Overlay -->
+    <string name="error_title">خطأ في الاتصال</string>
+    <string name="error_ssl_title">خطأ في شهادة الأمان</string>
+    <string name="error_ssl_message">الاتصال بهذا الموقع غير موثوق. تم إلغاء التحميل حفاظًا على أمانك.</string>
+    <string name="error_host_lookup">تعذر الوصول إلى الخادم. تحقق من اتصال الإنترنت أو صحة العنوان.</string>
+    <string name="error_connect">تم رفض الاتصال أو تعذر الوصول إلى الموقع.</string>
+    <string name="error_timeout">انتهت مهلة الاتصال أثناء تحميل هذه الصفحة.</string>
+    <string name="error_network_generic">خطأ في الاتصال (%1$d)</string>
+    <string name="error_retry">تحديث</string>
+    <string name="error_open_home">فتح الموقع</string>
+    <string name="error_open_settings">الإعدادات</string>
+
+    <!-- Settings Screen -->
+    <string name="settings_title">الإعدادات</string>
+    <string name="settings_back">رجوع</string>
+    <string name="settings_section_startup">بدء التشغيل و الصفحة الرئيسية</string>
+    <string name="settings_homepage_label">الصفحة الرئيسية</string>
+    <string name="settings_homepage_hint">https://www.tiktok.com/tiktokstudio</string>
+    <string name="settings_homepage_helper">يُفتح هذا الموقع تلقائيًا عند تشغيل التطبيق وعند الضغط على الرئيسية.</string>
+    <string name="settings_save_homepage">حفظ</string>
+    <string name="settings_reset_default">استعادة الافتراضي</string>
+    <string name="settings_homepage_saved">تم حفظ الصفحة الرئيسية بنجاح.</string>
+    <string name="settings_homepage_invalid">يرجى إدخال رابط موقع صحيح (مثل https://www.tiktok.com/tiktokstudio).</string>
+
+    <string name="settings_section_rendering">العرض والمحرك</string>
+    <string name="settings_desktop_mode_title">وضع سطح المكتب</string>
+    <string name="settings_desktop_mode_desc">عرض المواقع بتخطيط سطح المكتب الكامل مع عرض واسع ومُعرّف متصفح سطح المكتب والتمرير الأفقي.</string>
+    <string name="settings_zoom_title">حجم عرض المواقع</string>
+    <string name="settings_zoom_desc">تغيير حجم عرض الصفحات (50% – 200%) في جميع علامات التبويب مع الحفاظ على وضع سطح المكتب والتكبير باللمس.</string>
+    <string name="settings_zoom_reset">إعادة ضبط الحجم</string>
+    <string name="settings_zoom_percent_format">%1$d%%</string>
+    <string name="settings_javascript_title">جافاسكريبت</string>
+    <string name="settings_javascript_desc">مطلوب لتشغيل المواقع الحديثة بما في ذلك تسجيل الدخول ورفع الفيديوهات في TikTok Studio.</string>
+
+    <string name="settings_section_privacy">الخصوصية وبيانات الجلسة</string>
+    <string name="settings_clear_data_title">مسح بيانات التصفح</string>
+    <string name="settings_clear_data_desc">حذف ملفات تعريف الارتباط والملفات المؤقتة وبيانات النماذج وتخزين الويب وسجل التصفح.</string>
+    <string name="settings_clear_data_confirm_title">هل تريد مسح بيانات التصفح؟</string>
+    <string name="settings_clear_data_confirm_body">سيؤدي ذلك إلى تسجيل خروجك من المواقع (بما في ذلك TikTok) وحذف الصفحات المؤقتة وملفات تعريف الارتباط.</string>
+    <string name="settings_clear_data_confirm_action">مسح بيانات التصفح</string>
+    <string name="settings_cancel">إلغاء</string>
+    <string name="settings_data_cleared">تم مسح بيانات التصفح وملفات تعريف الارتباط بنجاح.</string>
+
+    <string name="settings_section_info">معلومات المحرك</string>
+    <string name="settings_active_ua_label">مُعرّف المتصفح النشط</string>
+
+    <!-- File & Download Messages -->
+    <string name="downloads_title">التنزيلات</string>
+    <string name="download_started">جارٍ تنزيل %1$s إلى التنزيلات…</string>
+    <string name="download_failed">تعذر بدء التنزيل: %1$s</string>
+    <string name="download_unsupported">نوع رابط التنزيل غير مدعوم</string>
+    <string name="file_picker_title">اختيار ملف أو فيديو</string>
+    <string name="file_picker_unavailable">لم يتم العثور على تطبيق متوافق لاختيار الملفات على هذا الجهاز.</string>
+    <string name="fullscreen_exit_hint">اضغط رجوع للخروج من وضع ملء الشاشة</string>
+</resources>
